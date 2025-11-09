@@ -82,3 +82,24 @@ static void run_suite(const std::string& label,
 
     for (auto& [ptr, cnt] : data) delete[] ptr;
 }
+
+int main(int argc, char** argv) {
+    size_t n_ops = 500000;
+    int repeats = 1;
+    try {
+        if (argc > 1) n_ops = static_cast<size_t>(std::stoull(argv[1]));
+        if (argc > 2) repeats = std::max(1, std::stoi(argv[2]));
+    } catch (const std::exception& e) {
+        std::cerr << "invalid arguments: " << e.what() << "\n";
+        return 1;
+    }
+
+    for (int thr : {1,2,3}) {
+        run_suite("A", "ops", n_ops, thr, repeats); 
+        run_suite("B", "ops", n_ops, thr, repeats); 
+        run_suite("C", "ops", n_ops, thr, repeats);
+    }
+
+    two_fields dbg(1, 2);
+    std::cout << "sample string(): " << static_cast<std::string>(dbg) << "\n";
+}
