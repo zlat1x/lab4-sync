@@ -1,0 +1,12 @@
+# build
+lab4_sync
+*.exe
+*.obj
+*.o
+
+# generated operation files
+ops_*_t*.txt
+
+# OS noise
+.DS_Store
+Thumbs.db
