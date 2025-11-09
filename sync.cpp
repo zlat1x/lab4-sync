@@ -3,6 +3,9 @@
 #include <shared_mutex>
 #include <fstream>
 #include <chrono>
+#include <random>
+#include <stdexcept>
+#include <cassert>
 
 int two_fields::get0() const {
     std::shared_lock<std::shared_mutex> lk(m0_);
@@ -57,4 +60,54 @@ long long run_actions(const action* begin, const action* end, two_fields& obj) {
 
     const auto t1 = clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+}
+
+static void write_ops(std::ofstream& out, op_kind k, int fld, int val) {
+    switch (k) {
+        case op_kind::read:out << "read "   << fld << "\n"; break;
+        case op_kind::write:out << "write "  << fld << " " << val << "\n"; break;
+        case op_kind::as_string:out << "string"  << "\n"; break;
+    }
+}
+
+static void generate_weighted(const std::string& filename,
+                              int p_r0, int p_w0, int p_r1, int p_w1, int p_str,
+                              size_t n_ops)
+{
+    assert(p_r0 >= 0 && p_w0 >= 0 && p_r1 >= 0 && p_w1 >= 0 && p_str >= 0);
+    const int total = p_r0 + p_w0 + p_r1 + p_w1 + p_str;
+    assert(total == 100 && "freqs must sum to 100");
+
+    std::ofstream out(filename);
+    if (!out) throw std::runtime_error("cannot open " + filename);
+
+    std::mt19937_64 rng(0xC0FFEE + std::hash<std::string>{}(filename));
+    std::uniform_int_distribution<int> pick(1, 100);
+    std::uniform_int_distribution<int> val(1, 1000);
+
+    for (size_t i = 0; i < n_ops; ++i) {
+        int r = pick(rng);
+        if ((r -= p_r0) <= 0) { write_ops(out, op_kind::read, 0, 0); continue; }
+        if ((r -= p_w0) <= 0) { write_ops(out, op_kind::write, 0, val(rng)); continue; }
+        if ((r -= p_r1) <= 0) { write_ops(out, op_kind::read, 1, 0); continue; }
+        if ((r -= p_w1) <= 0) { write_ops(out, op_kind::write, 1, val(rng)); continue; }
+        write_ops(out, op_kind::as_string, -1, 0);
+    }
+
+    if (!out) { throw std::runtime_error("I/O error while writing " + filename); }
+}
+
+void generate_case_A_variant16(const std::string& base_name, int tid, size_t n_ops) {
+    generate_weighted(base_name + "_A_t" + std::to_string(tid) + ".txt",
+                      20, 5, 20, 5, 50, n_ops);
+}
+
+void generate_case_B_uniform(const std::string& base_name, int tid, size_t n_ops) {
+    generate_weighted(base_name + "_B_t" + std::to_string(tid) + ".txt",
+                      20, 20, 20, 20, 20, n_ops);
+}
+
+void generate_case_C_skewed(const std::string& base_name, int tid, size_t n_ops) {
+    generate_weighted(base_name + "_C_t" + std::to_string(tid) + ".txt",
+                      5, 40, 5, 40, 10, n_ops);
 }
