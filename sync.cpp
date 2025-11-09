@@ -6,6 +6,8 @@
 #include <random>
 #include <stdexcept>
 #include <cassert>
+#include <iomanip>
+#include <syncstream>
 
 int two_fields::get0() const {
     std::shared_lock<std::shared_mutex> lk(m0_);
@@ -110,4 +112,34 @@ void generate_case_B_uniform(const std::string& base_name, int tid, size_t n_ops
 void generate_case_C_skewed(const std::string& base_name, int tid, size_t n_ops) {
     generate_weighted(base_name + "_C_t" + std::to_string(tid) + ".txt",
                       5, 40, 5, 40, 10, n_ops);
+}
+
+std::pair<action*, size_t> load_actions(const std::string& filename) {
+    std::ifstream f(filename);
+    if (!f) throw std::runtime_error("cannot open " + filename);
+    size_t cnt = 0;
+    std::string tmp;
+    while (std::getline(f, tmp)) ++cnt;
+
+    action* arr = new action[cnt];
+    
+    f.close();
+    std::ifstream g(filename);
+    size_t i = 0;
+    while (g) {
+        std::string op;
+        if (!(g >> op)) break;
+        if (op == "read") {
+            int fld; g >> fld;
+            arr[i++] = action{op_kind::read, fld, 0};
+        } else if (op == "write") {
+            int fld, v; g >> fld >> v;
+            arr[i++] = action{op_kind::write, fld, v};
+        } else if (op == "string") {
+            arr[i++] = action{op_kind::as_string, -1, 0};
+        } else {
+            std::string skip; std::getline(g, skip);
+        }
+    }
+    return {arr, i};
 }
