@@ -1,12 +1,16 @@
 # build
 lab4_sync
+lab4_sync.exe
 *.exe
 *.obj
 *.o
+*.pdb
+*.ilk
 
 # generated operation files
 ops_*_t*.txt
 
-# OS noise
+# OS/IDE
 .DS_Store
 Thumbs.db
+.vscode/
